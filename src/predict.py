@@ -1,8 +1,8 @@
 import torch
-import torchvision.transforms as transforms
 from PIL import Image
 from models.model import resnet18 
 from config import config as config_predict
+from common.utils import get_normalization_transform
 
 # Load the trained model
 model_path = "output/mnist_resnet.pt"
@@ -12,11 +12,7 @@ model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
 model.eval()
 
 
-data_transform=transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.1307,), (0.3081,))
-])
-
+data_transform=get_normalization_transform()
 
 # Load and preprocess the image
 image_path = "data/t10k-images-idx3-ubyte_dir/image_1003.png"

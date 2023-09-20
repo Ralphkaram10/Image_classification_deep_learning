@@ -7,7 +7,7 @@ batch_size=64
 # Batch size for testing (default: 1000)
 test_batch_size=1000
 # Number of epochs to train (default: 14)
-epochs=4
+epochs=1
 # Learning rate (default: 1.0)
 lr=1
 # Learning rate step gamma (default: 0.7)
@@ -26,3 +26,5 @@ log_interval=10
 save_model=True
 # Number of classes used for classification
 num_classes=10
+# Applies normalization as a preprocessing step
+normalize=True
