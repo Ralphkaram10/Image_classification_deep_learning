@@ -1,56 +1,78 @@
+"""Module to train an image classifier"""
 from __future__ import print_function
-import argparse
+from dataclasses import dataclass
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torchvision import datasets
+from torch import nn
+from torch import optim
+from torch.optim.optimizer import Optimizer
 from torch.optim.lr_scheduler import StepLR
-import config.config as config_train 
-from DL.classification_dl import CustomDataset 
+from DL.classification_dl import CustomDataset
 from models.model import resnet18 as Net
-from common.datakeywords import *
+from config import config_train
 from common.utils import get_normalization_transform
 
-def train_one_epoch(model, device, train_loader, optimizer, epoch, log_interval=10, dry_run=False):
+
+@dataclass
+class HyperParametersTrainOneEpoch:
+    """A data class for hyperparameters"""
+
+    optimizer: Optimizer
+    epoch: int
+    log_interval: int = 10
+    dry_run: bool = False
+
+
+def train_one_epoch(model, device, train_loader, hyperparameters: HyperParametersTrainOneEpoch):
+    """Trains on train_loader for one epoch"""
     model.train()
     criterion = nn.CrossEntropyLoss()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
-        optimizer.zero_grad()
+        hyperparameters.optimizer.zero_grad()
         output = model(data)
         loss = criterion(output, target)
         loss.backward()
-        optimizer.step()
-        if batch_idx % log_interval == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.item()))
-            if dry_run:
+        hyperparameters.optimizer.step()
+        if batch_idx % hyperparameters.log_interval == 0:
+            print(
+                f"Train Epoch: {hyperparameters.epoch} "
+                f"[{batch_idx*len(data)}/{len(train_loader.dataset)}"
+                f" ({100. * batch_idx / len(train_loader):.0f}%)]"
+                f"\tLoss: {loss.item():.6f}"
+            )
+            if hyperparameters.dry_run:
                 break
 
 
 def test(model, device, test_loader):
+    """Tests model on test_loader"""
     model.eval()
     test_loss = 0
     correct = 0
-    criterion = nn.CrossEntropyLoss(reduction='sum')
+    criterion = nn.CrossEntropyLoss(reduction="sum")
     with torch.no_grad():
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
             test_loss += criterion(output, target).item()  # sum up batch loss
-            pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
+            pred = output.argmax(
+                dim=1, keepdim=True
+            )  # get the index of the max log-probability
             correct += pred.eq(target.view_as(pred)).sum().item()
     test_loss /= len(test_loader.dataset)
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-        test_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset)))
+    print(
+        f"\nTest set: "
+        f"Average loss: {test_loss:.4f}, "
+        f"Accuracy: {correct}/{len(test_loader.dataset)} "
+        f"({100.0 * correct / len(test_loader.dataset):.0f}%)\n"
+    )
+
 
 def get_torch_device():
-    use_cuda = config_train.use_cuda and torch.cuda.is_available()
-    use_mps = config_train.use_mps and torch.backends.mps.is_available()
-    torch.manual_seed(config_train.seed)
+    """Gets torch device"""
+    use_cuda = config_train.USE_CUDA and torch.cuda.is_available()
+    use_mps = config_train.USE_MPS and torch.backends.mps.is_available()
+    torch.manual_seed(config_train.SEED)
     if use_cuda:
         device = torch.device("cuda")
     elif use_mps:
@@ -59,47 +81,61 @@ def get_torch_device():
         device = torch.device("cpu")
     return device
 
-def get_dataloader_kwargs(batch_size=10,num_workers=1,pin_memory=True,shuffle=True):
-    use_cuda = config_train.use_cuda and torch.cuda.is_available()
-    kwargs = {'batch_size': batch_size}
+
+def get_dataloader_kwargs(batch_size=10, num_workers=1, pin_memory=True, shuffle=True):
+    """Gets dataloader keyword arguments"""
+    use_cuda = config_train.USE_CUDA and torch.cuda.is_available()
+    kwargs = {"batch_size": batch_size}
     if use_cuda:
-        cuda_kwargs = {'num_workers': 1,
-                       'pin_memory': True,
-                       'shuffle': True}
+        cuda_kwargs = {
+            "num_workers": num_workers,
+            "pin_memory": pin_memory,
+            "shuffle": shuffle,
+        }
         kwargs.update(cuda_kwargs)
     return kwargs
 
 
 def main():
-    
-    device=get_torch_device()
-    
-    train_loader_kwargs=get_dataloader_kwargs(batch_size=config_train.batch_size,num_workers=1,pin_memory=True,shuffle=True)
-    test_loader_kwargs=get_dataloader_kwargs(batch_size=config_train.test_batch_size,num_workers=1,pin_memory=True,shuffle=True)
+    """Main function"""
+    device = get_torch_device()
 
-    if config_train.normalize:
-        transform=get_normalization_transform()
+    train_loader_kwargs = get_dataloader_kwargs(
+        batch_size=config_train.BATCH_SIZE, num_workers=1, pin_memory=True, shuffle=True
+    )
+    test_loader_kwargs = get_dataloader_kwargs(
+        batch_size=config_train.TEST_BATCH_SIZE,
+        num_workers=1,
+        pin_memory=True,
+        shuffle=True,
+    )
+
+    if config_train.NORMALIZE:
+        transform = get_normalization_transform()
     else:
-        transform=None
+        transform = None
 
-    dataset1=CustomDataset(config_train.train_manifest_path, transform=transform)
-    dataset2=CustomDataset(config_train.test_manifest_path, transform=transform)
+    dataset1 = CustomDataset(config_train.TRAIN_MANIFEST_PATH, transform=transform)
+    dataset2 = CustomDataset(config_train.TEST_MANIFEST_PATH, transform=transform)
 
-    train_loader = torch.utils.data.DataLoader(dataset1,**train_loader_kwargs)
+    train_loader = torch.utils.data.DataLoader(dataset1, **train_loader_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_loader_kwargs)
 
-    model = Net(num_classes=config_train.num_classes).to(device)
-    optimizer = optim.Adadelta(model.parameters(), lr=config_train.lr)
+    model = Net(num_classes=config_train.NUM_CLASSES).to(device)
+    optimizer = optim.Adadelta(model.parameters(), lr=config_train.LR)
 
-    scheduler = StepLR(optimizer, step_size=1, gamma=config_train.gamma)
-    for epoch in range(1, config_train.epochs + 1):
-        train_one_epoch(model, device, train_loader, optimizer, epoch, log_interval=config_train.log_interval, dry_run=config_train.dry_run)
+    scheduler = StepLR(optimizer, step_size=1, gamma=config_train.GAMMA)
+    for epoch in range(1, config_train.EPOCHS + 1):
+        hyperparameters = HyperParametersTrainOneEpoch(
+            optimizer, epoch, config_train.LOG_INTERVAL, config_train.DRY_RUN
+        )
+        train_one_epoch(model, device, train_loader, hyperparameters)
         test(model, device, test_loader)
         scheduler.step()
 
-    if config_train.save_model:
+    if config_train.SAVE_MODEL:
         torch.save(model.state_dict(), "output/mnist_resnet.pt")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
