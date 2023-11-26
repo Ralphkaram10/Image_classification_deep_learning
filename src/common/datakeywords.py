@@ -1,2 +1,3 @@
-pathkey='path'
-labelkey='label'
+"""Module providing data keywords"""
+PATHKEY='path'
+LABELKEY='label'

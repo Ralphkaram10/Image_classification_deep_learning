@@ -62,7 +62,7 @@ data = list(zip(image_paths, labels))
 
 with open(output_csv_path, 'w', newline='') as csv_file:
     csv_writer = csv.writer(csv_file)
-    csv_writer.writerow([pathkey, labelkey])  # Write header
+    csv_writer.writerow([PATHKEY, LABELKEY])  # Write header
     csv_writer.writerows(data)
 
 print(f'Saved {num_labels} image paths and labels to {output_csv_path}')
