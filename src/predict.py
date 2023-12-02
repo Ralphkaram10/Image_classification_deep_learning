@@ -6,27 +6,53 @@ from config import config_predict
 from config import config_train
 from common.utils import get_normalization_transform
 
-if __name__ == "__main__":
-    # load the trained model
-    model = resnet18(num_classes=config_train.NUM_CLASSES)
-    model.load_state_dict(
+
+def model_load():
+    """Load the trained model based on train and predict configs"""
+    net = resnet18(num_classes=config_train.NUM_CLASSES)
+    net.load_state_dict(
         torch.load(config_predict.MODEL_PATH, map_location=torch.device("cpu"))
     )
-    model.eval()
+    return net
 
+
+def load_preprocess_image():
+    """Load and preprocess the image based on predict config"""
     data_transform = get_normalization_transform()
+    im = Image.open(config_predict.IMAGE_PATH).convert("RGB")
+    im_tensor = data_transform(im).unsqueeze(0)
+    return im_tensor
 
-    # Load and preprocess the image
-    image = Image.open(config_predict.IMAGE_PATH).convert("RGB")
-    image_tensor = data_transform(image).unsqueeze(0)
 
+def perform_inference(im_tensor, model):
+    """Perform inference on an image tensor using the specified model"""
     # Perform inference
     with torch.no_grad():
-        output = model(image_tensor)
+        output = model(im_tensor)
 
     # Get the predicted class index
     predicted_class_idx = torch.argmax(output).item()
-    print(f"Predicted class index: {predicted_class_idx}")
+    return predicted_class_idx
 
-    # Show image
+
+def main():
+    """The main function of predict.py"""
+
+    # Load and preprocess the image
+    image_tensor = load_preprocess_image()
+
+    # Load the trained model
+    model = model_load()
+    model.eval()
+
+    # Perform inference on the image
+    predicted_class_idx = perform_inference(image_tensor, model)
+
+    # Show real image and predicted class index
+    print(f"Predicted class index: {predicted_class_idx}")
+    image = Image.open(config_predict.IMAGE_PATH).convert("RGB")
     image.show()
+
+
+if __name__ == "__main__":
+    main()
