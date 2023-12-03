@@ -8,9 +8,10 @@ from torch.optim.optimizer import Optimizer
 from torch.optim.lr_scheduler import StepLR
 from DL.classification_dl import CustomDataset
 from models.model import resnet18 as Net
-from config import config_train
-from common.utils import get_normalization_transform
+from common.utils import get_normalization_transform, load_yaml_config
+from common import datakeywords as dk
 
+cfg_train = load_yaml_config("src/config/config_train.yaml")
 
 @dataclass
 class HyperParametersTrainOneEpoch:
@@ -22,7 +23,9 @@ class HyperParametersTrainOneEpoch:
     dry_run: bool = False
 
 
-def train_one_epoch(model, device, train_loader, hyperparameters: HyperParametersTrainOneEpoch):
+def train_one_epoch(
+    model, device, train_loader, hyperparameters: HyperParametersTrainOneEpoch
+):
     """Trains on train_loader for one epoch"""
     model.train()
     criterion = nn.CrossEntropyLoss()
@@ -70,9 +73,9 @@ def test(model, device, test_loader):
 
 def get_torch_device():
     """Gets torch device"""
-    use_cuda = config_train.USE_CUDA and torch.cuda.is_available()
-    use_mps = config_train.USE_MPS and torch.backends.mps.is_available()
-    torch.manual_seed(config_train.SEED)
+    use_cuda = cfg_train[dk.USE_CUDA_KEY] and torch.cuda.is_available()
+    use_mps = cfg_train[dk.USE_MPS_KEY] and torch.backends.mps.is_available()
+    torch.manual_seed(cfg_train[dk.SEED_KEY])
     if use_cuda:
         device = torch.device("cuda")
     elif use_mps:
@@ -84,7 +87,7 @@ def get_torch_device():
 
 def get_dataloader_kwargs(batch_size=10, num_workers=1, pin_memory=True, shuffle=True):
     """Gets dataloader keyword arguments"""
-    use_cuda = config_train.USE_CUDA and torch.cuda.is_available()
+    use_cuda = cfg_train[dk.USE_CUDA_KEY] and torch.cuda.is_available()
     kwargs = {"batch_size": batch_size}
     if use_cuda:
         cuda_kwargs = {
@@ -101,39 +104,42 @@ def main():
     device = get_torch_device()
 
     train_loader_kwargs = get_dataloader_kwargs(
-        batch_size=config_train.BATCH_SIZE, num_workers=1, pin_memory=True, shuffle=True
+        batch_size=cfg_train[dk.BATCH_SIZE_KEY],
+        num_workers=1,
+        pin_memory=True,
+        shuffle=True,
     )
     test_loader_kwargs = get_dataloader_kwargs(
-        batch_size=config_train.TEST_BATCH_SIZE,
+        batch_size=cfg_train[dk.TEST_BATCH_SIZE_KEY],
         num_workers=1,
         pin_memory=True,
         shuffle=True,
     )
 
-    if config_train.NORMALIZE:
+    if cfg_train[dk.NORMALIZE_KEY]:
         transform = get_normalization_transform()
     else:
         transform = None
 
-    dataset1 = CustomDataset(config_train.TRAIN_MANIFEST_PATH, transform=transform)
-    dataset2 = CustomDataset(config_train.TEST_MANIFEST_PATH, transform=transform)
+    dataset1 = CustomDataset(cfg_train[dk.TRAIN_MANIFEST_PATH_KEY], transform=transform)
+    dataset2 = CustomDataset(cfg_train[dk.TEST_MANIFEST_PATH_KEY], transform=transform)
 
     train_loader = torch.utils.data.DataLoader(dataset1, **train_loader_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_loader_kwargs)
 
-    model = Net(num_classes=config_train.NUM_CLASSES).to(device)
-    optimizer = optim.Adadelta(model.parameters(), lr=config_train.LR)
+    model = Net(num_classes=cfg_train[dk.NUM_CLASSES_KEY]).to(device)
+    optimizer = optim.Adadelta(model.parameters(), lr=cfg_train[dk.LR_KEY])
 
-    scheduler = StepLR(optimizer, step_size=1, gamma=config_train.GAMMA)
-    for epoch in range(1, config_train.EPOCHS + 1):
+    scheduler = StepLR(optimizer, step_size=1, gamma=cfg_train[dk.GAMMA_KEY])
+    for epoch in range(1, cfg_train[dk.EPOCHS_KEY] + 1):
         hyperparameters = HyperParametersTrainOneEpoch(
-            optimizer, epoch, config_train.LOG_INTERVAL, config_train.DRY_RUN
+            optimizer, epoch, cfg_train[dk.LOG_INTERVAL_KEY], cfg_train[dk.DRY_RUN_KEY]
         )
         train_one_epoch(model, device, train_loader, hyperparameters)
         test(model, device, test_loader)
         scheduler.step()
 
-    if config_train.SAVE_MODEL:
+    if cfg_train[dk.SAVE_MODEL_KEY]:
         torch.save(model.state_dict(), "output/mnist_resnet.pt")
 
 

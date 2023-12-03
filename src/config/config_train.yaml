@@ -1,31 +1,31 @@
-"""Config file for train.py"""
+# Config file for train.py
 # manifest file path that indexes training data
-TRAIN_MANIFEST_PATH = "output/train_mnist.csv"
+TRAIN_MANIFEST_PATH: "output/train_mnist.csv"
 # manifest file path that indexes test data
-TEST_MANIFEST_PATH = "output/test_mnist.csv"
+TEST_MANIFEST_PATH: "output/test_mnist.csv"
 # Batch size for training (default: 64)
-BATCH_SIZE = 64
+BATCH_SIZE: 64
 # Batch size for testing (default: 1000)
-TEST_BATCH_SIZE = 1000
+TEST_BATCH_SIZE: 1000
 # Number of epochs to train (default: 14)
-EPOCHS = 1
+EPOCHS: 1
 # Learning rate (default: 1.0)
-LR = 1
+LR: 1
 # Learning rate step gamma (default: 0.7)
-GAMMA = 0.7
+GAMMA: 0.7
 # Enables CUDA training
-USE_CUDA = True
+USE_CUDA: true
 # Enables macOS GPU training
-USE_MPS = True
+USE_MPS: true
 # Quickly check a single pass
-DRY_RUN = False
+DRY_RUN: false
 # Random seed (default: 1)
-SEED = 1
-# How many  batches to wait before logging training status
-LOG_INTERVAL = 10
+SEED: 1
+# How many batches to wait before logging training status
+LOG_INTERVAL: 10
 # For saving the current Model
-SAVE_MODEL = True
+SAVE_MODEL: true
 # Number of classes used for classification
-NUM_CLASSES = 10
+NUM_CLASSES: 10
 # Applies normalization as a preprocessing step
-NORMALIZE = True
+NORMALIZE: true
