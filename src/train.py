@@ -101,7 +101,14 @@ def get_dataloader_kwargs(batch_size=10, num_workers=1, pin_memory=True, shuffle
 
 def main():
     """Main function"""
-    device = get_torch_device()
+
+    if cfg_train[dk.NORMALIZE_KEY]:
+        transform = get_normalization_transform()
+    else:
+        transform = None
+
+    dataset1 = CustomDataset(cfg_train[dk.TRAIN_MANIFEST_PATH_KEY], transform=transform)
+    dataset2 = CustomDataset(cfg_train[dk.TEST_MANIFEST_PATH_KEY], transform=transform)
 
     train_loader_kwargs = get_dataloader_kwargs(
         batch_size=cfg_train[dk.BATCH_SIZE_KEY],
@@ -116,16 +123,10 @@ def main():
         shuffle=True,
     )
 
-    if cfg_train[dk.NORMALIZE_KEY]:
-        transform = get_normalization_transform()
-    else:
-        transform = None
-
-    dataset1 = CustomDataset(cfg_train[dk.TRAIN_MANIFEST_PATH_KEY], transform=transform)
-    dataset2 = CustomDataset(cfg_train[dk.TEST_MANIFEST_PATH_KEY], transform=transform)
-
     train_loader = torch.utils.data.DataLoader(dataset1, **train_loader_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_loader_kwargs)
+
+    device = get_torch_device()
 
     model = Net(num_classes=cfg_train[dk.NUM_CLASSES_KEY]).to(device)
     optimizer = optim.Adadelta(model.parameters(), lr=cfg_train[dk.LR_KEY])
