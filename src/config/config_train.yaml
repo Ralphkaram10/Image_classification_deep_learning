@@ -27,5 +27,3 @@ LOG_INTERVAL: 10
 SAVE_MODEL: true
 # Number of classes used for classification
 NUM_CLASSES: 10
-# Applies normalization as a preprocessing step
-NORMALIZE: true

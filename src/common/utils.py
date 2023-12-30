@@ -10,7 +10,7 @@ def get_normalization_transform():
     ])
     return data_transform
 
-def load_yaml_config(yaml_file_path):
+def load_yaml_config(yaml_file_path: str)->dict:
     """Loads a yaml config file and returns its associated dictionary"""
     with open(yaml_file_path, "r",encoding="utf-8") as yaml_file:
         config_data = yaml.safe_load(yaml_file)

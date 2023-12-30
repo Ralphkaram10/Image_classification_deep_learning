@@ -8,7 +8,7 @@ from torch.optim.optimizer import Optimizer
 from torch.optim.lr_scheduler import StepLR
 from DL.classification_dl import CustomDataset
 from models.model import resnet18 as Net
-from common.utils import get_normalization_transform, load_yaml_config
+from common.utils import load_yaml_config
 from common import datakeywords as dk
 
 cfg_train = load_yaml_config("src/config/config_train.yaml")
@@ -102,13 +102,8 @@ def get_dataloader_kwargs(batch_size=10, num_workers=1, pin_memory=True, shuffle
 def main():
     """Main function"""
 
-    if cfg_train[dk.NORMALIZE_KEY]:
-        transform = get_normalization_transform()
-    else:
-        transform = None
-
-    dataset1 = CustomDataset(cfg_train[dk.TRAIN_MANIFEST_PATH_KEY], transform=transform)
-    dataset2 = CustomDataset(cfg_train[dk.TEST_MANIFEST_PATH_KEY], transform=transform)
+    dataset1 = CustomDataset(cfg_train[dk.TRAIN_MANIFEST_PATH_KEY])
+    dataset2 = CustomDataset(cfg_train[dk.TEST_MANIFEST_PATH_KEY])
 
     train_loader_kwargs = get_dataloader_kwargs(
         batch_size=cfg_train[dk.BATCH_SIZE_KEY],

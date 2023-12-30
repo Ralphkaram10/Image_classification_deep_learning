@@ -2,8 +2,9 @@
 import torch
 from PIL import Image
 from models.model import resnet18
-from common.utils import get_normalization_transform, load_yaml_config
+from common.utils import load_yaml_config
 from common import datakeywords as dk
+from DL.classification_dl import preprocess_image
 
 cfg_train = load_yaml_config("src/config/config_train.yaml")
 cfg_predict = load_yaml_config("src/config/config_predict.yaml")
@@ -20,10 +21,8 @@ def model_load():
 
 def load_preprocess_image():
     """Load and preprocess the image based on predict config"""
-    data_transform = get_normalization_transform()
     im = Image.open(cfg_predict[dk.IMAGE_PATH_KEY]).convert("RGB")
-    im_tensor = data_transform(im).unsqueeze(0)
-    return im_tensor
+    return preprocess_image(im,to_predict=True)
 
 
 def perform_inference(im_tensor, model):
